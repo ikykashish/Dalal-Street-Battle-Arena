@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: dsba_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: dalal_street_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    container_name: dsba_app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: "postgresql://postgres:password@postgres:5432/dalal_street_db"
+      NEXTAUTH_SECRET: "your-super-secret-key-change-in-production-min-32-chars"
+      NEXTAUTH_URL: "http://localhost:3000"
+      NEXT_PUBLIC_SOCKET_URL: "http://localhost:3000"
+      NODE_ENV: "production"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >
+      sh -c "npx prisma migrate deploy &&
+             npx ts-node --project tsconfig.server.json prisma/seed.ts &&
+             node server.js"
+
+volumes:
+  postgres_data:
