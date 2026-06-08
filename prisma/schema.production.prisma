@@ -1,0 +1,112 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  password     String
+  cashBalance  Float    @default(1000000)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  team      Team?           @relation(fields: [teamId], references: [id])
+  teamId    String?
+  holdings  Holding[]
+  trades    Trade[]
+  watchlist WatchlistItem[]
+
+  @@index([teamId])
+}
+
+model Team {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  code        String   @unique
+  description String?
+  creatorId   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  members     User[]
+}
+
+model Stock {
+  id            String   @id @default(cuid())
+  symbol        String   @unique
+  name          String
+  sector        String
+  currentPrice  Float
+  previousClose Float
+  open          Float
+  dayHigh       Float
+  dayLow        Float
+  high52Week    Float
+  low52Week     Float
+  volume        Int      @default(0)
+  marketCap     Float    @default(0)
+  change        Float    @default(0)
+  changePercent Float    @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  holdings   Holding[]
+  trades     Trade[]
+  watchlists WatchlistItem[]
+
+  @@index([symbol])
+  @@index([sector])
+}
+
+model Holding {
+  id        String   @id @default(cuid())
+  quantity  Int
+  avgPrice  Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId  String
+  stock   Stock  @relation(fields: [stockId], references: [id])
+  stockId String
+
+  @@unique([userId, stockId])
+  @@index([userId])
+}
+
+model Trade {
+  id        String   @id @default(cuid())
+  type      String
+  quantity  Int
+  price     Float
+  total     Float
+  createdAt DateTime @default(now())
+
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId  String
+  stock   Stock  @relation(fields: [stockId], references: [id])
+  stockId String
+
+  @@index([userId])
+  @@index([stockId])
+  @@index([createdAt])
+}
+
+model WatchlistItem {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId  String
+  stock   Stock  @relation(fields: [stockId], references: [id])
+  stockId String
+
+  @@unique([userId, stockId])
+  @@index([userId])
+}
