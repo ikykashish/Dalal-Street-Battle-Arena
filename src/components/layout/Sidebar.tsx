@@ -5,15 +5,14 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, BarChart2, Briefcase,
   Trophy, Users, Bookmark, TrendingUp, LogOut, X,
-  AlertTriangle, Zap,
+  AlertTriangle, Zap, Eye, ScrollText,
 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { useSession } from 'next-auth/react'
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
+import { isAdminEmail } from '@/lib/admin-emails'
 import { BvpLogo } from '@/components/ui/BvpLogo'
-
-const ADMIN_EMAILS = ['pavithandgrover@outlook.com']
 
 const nav = [
   { href: '/dashboard',   icon: LayoutDashboard, label: 'Dashboard',   color: 'text-indigo-400' },
@@ -35,9 +34,7 @@ export function Sidebar({ onClose, mobile }: SidebarProps) {
   const [confirmOpen, setConfirmOpen] = useState(false)
 
   useEffect(() => {
-    if (session?.user?.email && ADMIN_EMAILS.includes(session.user.email)) {
-      setIsAdmin(true)
-    }
+    setIsAdmin(isAdminEmail(session?.user?.email))
   }, [session])
 
   const triggerRecession = async () => {
@@ -152,6 +149,33 @@ export function Sidebar({ onClose, mobile }: SidebarProps) {
             {recessionMsg && (
               <p className="mt-2 px-3 text-[11px] text-orange-200 leading-snug">{recessionMsg}</p>
             )}
+
+            {/* Admin navigation links */}
+            <div className="mt-2 space-y-1">
+              {[
+                { href: '/admin/monitoring', icon: Eye, label: 'Stock Monitoring' },
+                { href: '/admin/logs', icon: ScrollText, label: 'Admin Logs' },
+              ].map(({ href, icon: Icon, label }) => {
+                const active = pathname === href || pathname.startsWith(href + '/')
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    onClick={onClose}
+                    className={cn(
+                      'flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-sm font-medium border transition-all',
+                      active
+                        ? 'bg-orange-500/15 border-orange-500/40 text-orange-200'
+                        : 'text-orange-300/90 border-orange-500/20 hover:text-white hover:bg-orange-600/80 hover:border-orange-500/50'
+                    )}
+                  >
+                    <Icon className="w-4 h-4 shrink-0" />
+                    {label}
+                    {active && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-orange-400 shadow-[0_0_6px_rgba(251,146,60,0.8)]" />}
+                  </Link>
+                )
+              })}
+            </div>
           </div>
         )}
       </nav>

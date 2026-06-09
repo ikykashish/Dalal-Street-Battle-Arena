@@ -37,6 +37,11 @@ export const authOptions: NextAuthOptions = {
           throw new Error('Invalid password')
         }
 
+        // Banned users cannot log in at all
+        if (user.status === 'BANNED') {
+          throw new Error('Your account has been permanently banned by tournament administration.')
+        }
+
         return {
           id: user.id,
           email: user.email,

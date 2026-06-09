@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { accountBlockMessage } from '@/lib/admin'
 import { z } from 'zod'
 
 const tradeSchema = z.object({
@@ -34,6 +35,12 @@ export async function POST(req: NextRequest) {
 
     if (!user || !stock) {
       return NextResponse.json({ error: 'User or stock not found' }, { status: 404 })
+    }
+
+    // Suspended/banned users cannot trade
+    const blockMsg = accountBlockMessage(user.status)
+    if (blockMsg) {
+      return NextResponse.json({ error: blockMsg }, { status: 403 })
     }
 
     // Use client-supplied live price if within ±10% of DB price (anti-cheat)

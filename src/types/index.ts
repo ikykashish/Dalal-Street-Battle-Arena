@@ -113,3 +113,55 @@ export interface WatchlistItem {
   stock: Stock
   addedAt: string | Date
 }
+
+// ---- Admin Control Center ----
+export type UserStatus = 'ACTIVE' | 'SUSPENDED' | 'BANNED'
+
+export interface AdminUserRow {
+  id: string
+  name: string
+  email: string
+  teamName: string | null
+  status: UserStatus
+  cashBalance: number
+  portfolioValue: number
+  totalValue: number
+  totalPnL: number
+  totalPnLPercent: number
+  stocksBought: number
+  stocksSold: number
+  totalTrades: number
+  lastTradeAt: string | null
+  createdAt: string
+}
+
+export interface AdminTrade {
+  id: string
+  type: 'BUY' | 'SELL'
+  stockSymbol: string
+  stockName: string
+  quantity: number
+  price: number
+  total: number
+  pnl: number | null
+  createdAt: string
+}
+
+export interface AdminPenalty {
+  id: string
+  amount: number
+  reason: string
+  adminEmail: string
+  createdAt: string
+}
+
+export interface AdminLogEntry {
+  id: string
+  action: string
+  targetUserId: string | null
+  targetName: string | null
+  targetEmail: string | null
+  adminEmail: string
+  details: string | null
+  createdAt: string
+}

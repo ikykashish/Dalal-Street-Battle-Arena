@@ -12,6 +12,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [cashBalance, setCashBalance] = useState<number | undefined>(undefined)
+  const [accountStatus, setAccountStatus] = useState<string>('ACTIVE')
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -24,7 +25,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       fetch('/api/user')
         .then((r) => r.json())
         .then((d) => {
-          if (d.user) setCashBalance(d.user.cashBalance)
+          if (d.user) {
+            setCashBalance(d.user.cashBalance)
+            setAccountStatus(d.user.status || 'ACTIVE')
+          }
         })
         .catch(() => {})
     }
@@ -66,6 +70,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Navbar onMenuClick={() => setSidebarOpen(true)} cashBalance={cashBalance} />
+        {accountStatus === 'SUSPENDED' && (
+          <div className="bg-amber-500/15 border-b border-amber-500/40 px-4 py-2.5 text-center text-sm text-amber-200 font-medium">
+            ⚠️ Your account has been suspended by tournament administration. You cannot trade or join teams.
+          </div>
+        )}
         <main className="flex-1 overflow-y-auto">
           <div className="p-4 lg:p-6 max-w-[1600px] mx-auto animate-fade-in">
             {children}

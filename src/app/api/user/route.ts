@@ -15,6 +15,7 @@ export async function GET(req: NextRequest) {
         name: true,
         email: true,
         cashBalance: true,
+        status: true,
         teamId: true,
         createdAt: true,
         team: { select: { id: true, name: true, code: true } },

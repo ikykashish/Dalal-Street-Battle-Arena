@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { accountBlockMessage } from '@/lib/admin'
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -12,6 +13,10 @@ export async function POST(req: NextRequest) {
     if (!code) return NextResponse.json({ error: 'Team code required' }, { status: 400 })
 
     const user = await prisma.user.findUnique({ where: { id: session.user.id } })
+    const blockMsg = accountBlockMessage(user?.status)
+    if (blockMsg) {
+      return NextResponse.json({ error: blockMsg }, { status: 403 })
+    }
     if (user?.teamId) {
       return NextResponse.json({ error: 'Already in a team. Leave current team first.' }, { status: 400 })
     }

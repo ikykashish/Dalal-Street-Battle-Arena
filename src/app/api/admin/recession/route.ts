@@ -1,18 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/db'
+import { getAdminSession, writeAdminLog, isAdminEmail } from '@/lib/admin'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/db'
 
-const ADMIN_EMAILS = ['pavithandgrover@outlook.com']
 const DROP_PERCENT = 0.10 // 10% drop
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  if (!ADMIN_EMAILS.includes(session.user.email || '')) {
-    return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
-  }
+  const session = await getAdminSession()
+  if (!session) return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
 
   try {
     const stocks = await prisma.stock.findMany({
@@ -32,6 +28,12 @@ export async function POST(req: NextRequest) {
       })
     )
 
+    await writeAdminLog({
+      action: 'RECESSION_TRIGGERED',
+      adminEmail: session.user.email,
+      details: `Dropped all ${stocks.length} stocks by ${DROP_PERCENT * 100}%`,
+    })
+
     return NextResponse.json({
       success: true,
       message: `🔴 Recession Round triggered! All ${stocks.length} stocks dropped by 10%.`,
@@ -47,6 +49,5 @@ export async function POST(req: NextRequest) {
 export async function GET() {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const isAdmin = ADMIN_EMAILS.includes(session.user.email || '')
-  return NextResponse.json({ isAdmin })
+  return NextResponse.json({ isAdmin: isAdminEmail(session.user.email) })
 }

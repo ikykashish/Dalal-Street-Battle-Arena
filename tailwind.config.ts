@@ -70,6 +70,7 @@ const config: Config = {
         'ticker': 'ticker 60s linear infinite',
         'fade-in': 'fadeIn 0.3s ease-in-out',
         'slide-up': 'slideUp 0.3s ease-out',
+        'slide-in-right': 'slideInRight 0.25s ease-out',
         'glow-pulse': 'glowPulse 3s ease-in-out infinite',
       },
       keyframes: {
@@ -92,6 +93,10 @@ const config: Config = {
         slideUp: {
           from: { transform: 'translateY(20px)', opacity: '0' },
           to: { transform: 'translateY(0)', opacity: '1' },
+        },
+        slideInRight: {
+          from: { transform: 'translateX(100%)' },
+          to: { transform: 'translateX(0)' },
         },
         glowPulse: {
           '0%, 100%': { boxShadow: '0 0 20px rgba(99, 102, 241, 0.2)' },
