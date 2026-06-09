@@ -8,16 +8,16 @@ export async function GET(req: NextRequest) {
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      include: {
-        holdings: {
-          include: {
-            stock: true,
-          },
-        },
-      },
-    })
+    const [user, tradeHistory] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: session.user.id },
+        include: { holdings: { include: { stock: true } } },
+      }),
+      prisma.trade.findMany({
+        where: { userId: session.user.id },
+        select: { type: true, price: true, quantity: true },
+      }),
+    ])
 
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
@@ -64,6 +64,26 @@ export async function GET(req: NextRequest) {
       }
     })
 
+    // ---- Realized P&L calculation ----
+    // Total cost of all buy trades
+    let totalBuyCost = 0
+    let totalSellProceeds = 0
+    for (const t of tradeHistory) {
+      const amount = t.price * t.quantity
+      if (t.type === 'BUY') totalBuyCost += amount
+      else totalSellProceeds += amount
+    }
+
+    // Cost of shares still held (at avg price)
+    const holdingsCost = user.holdings.reduce((sum, h) => sum + h.avgPrice * h.quantity, 0)
+
+    // Cost of shares that were sold = total buy cost − what's still in holdings
+    const costOfSoldShares = Math.max(0, totalBuyCost - holdingsCost)
+    const realizedPnL = Math.round((totalSellProceeds - costOfSoldShares) * 100) / 100
+
+    // Unrealized P&L = current market value of holdings − their cost basis
+    const unrealizedPnL = Math.round((currentValue - holdingsCost) * 100) / 100
+
     const totalValue = user.cashBalance + currentValue
     const totalPnL = totalValue - INITIAL_CAPITAL
     const totalPnLPercent = (totalPnL / INITIAL_CAPITAL) * 100
@@ -79,6 +99,8 @@ export async function GET(req: NextRequest) {
         totalPnLPercent,
         dayPnL,
         dayPnLPercent: totalValue > 0 ? (dayPnL / (totalValue - dayPnL)) * 100 : 0,
+        realizedPnL,
+        unrealizedPnL,
         initialCapital: INITIAL_CAPITAL,
       },
     })

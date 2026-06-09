@@ -11,6 +11,14 @@ const tradeSchema = z.object({
   clientPrice: z.number().positive().optional(),
 })
 
+/** Market impact: buying pushes price up, selling pushes it down */
+function calcMarketImpact(price: number, quantity: number, volume: number, type: 'BUY' | 'SELL'): number {
+  // Impact as % = quantity / dailyVolume, capped at 1%
+  const rawImpact = Math.min((quantity / Math.max(volume, 10000)) * 0.5, 0.01)
+  const delta = price * rawImpact
+  return type === 'BUY' ? price + delta : price - delta
+}
+
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -28,17 +36,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'User or stock not found' }, { status: 404 })
     }
 
-    // Use client-supplied live price if it's within ±10% of DB price (anti-cheat check)
-    // Falls back to DB price if no client price supplied or if it looks manipulated
+    // Use client-supplied live price if within ±10% of DB price (anti-cheat)
     let livePrice = stock.currentPrice
     if (clientPrice) {
       const deviation = Math.abs(clientPrice - stock.currentPrice) / stock.currentPrice
-      if (deviation <= 0.10) {
-        livePrice = clientPrice  // ✅ Within 10% — use the live simulated price
-      }
-      // If > 10% deviation, silently fall back to DB price (price manipulation attempt)
+      if (deviation <= 0.10) livePrice = clientPrice
     }
     const total = livePrice * quantity
+
+    // Calculate new market price after impact
+    const newMarketPrice = Math.round(
+      calcMarketImpact(livePrice, quantity, stock.volume, type) * 100
+    ) / 100
 
     if (type === 'BUY') {
       if (user.cashBalance < total) {
@@ -46,13 +55,11 @@ export async function POST(req: NextRequest) {
       }
 
       const result = await prisma.$transaction(async (tx) => {
-        // Deduct cash
         await tx.user.update({
           where: { id: user.id },
           data: { cashBalance: { decrement: total } },
         })
 
-        // Update or create holding
         const existing = await tx.holding.findUnique({
           where: { userId_stockId: { userId: user.id, stockId: stock.id } },
         })
@@ -70,30 +77,29 @@ export async function POST(req: NextRequest) {
           })
         }
 
-        // Record trade
         const trade = await tx.trade.create({
           data: { userId: user.id, stockId: stock.id, type: 'BUY', quantity, price: livePrice, total },
           include: { stock: { select: { symbol: true, name: true } } },
         })
 
+        // Apply market impact — price goes up on buying pressure
+        await tx.stock.update({
+          where: { id: stock.id },
+          data: {
+            currentPrice: newMarketPrice,
+            change: newMarketPrice - stock.previousClose,
+            changePercent: ((newMarketPrice - stock.previousClose) / stock.previousClose) * 100,
+          },
+        })
+
         return trade
       })
 
-      // Broadcast trade to socket
-      const io = (global as any).io
-      if (io) {
-        io.emit('new_trade', {
-          type: 'BUY',
-          symbol: stock.symbol,
-          quantity,
-          price: livePrice,
-          total,
-          userName: user.name,
-          userId: user.id,
-        })
-      }
-
-      return NextResponse.json({ trade: result, message: `Bought ${quantity} shares of ${stock.symbol}` })
+      return NextResponse.json({
+        trade: result,
+        message: `Bought ${quantity} shares of ${stock.symbol}`,
+        newPrice: newMarketPrice,
+      })
     }
 
     if (type === 'SELL') {
@@ -105,14 +111,15 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Insufficient shares' }, { status: 400 })
       }
 
+      // Realized P&L for this sell
+      const realizedPnl = (livePrice - holding.avgPrice) * quantity
+
       const result = await prisma.$transaction(async (tx) => {
-        // Add cash
         await tx.user.update({
           where: { id: user.id },
           data: { cashBalance: { increment: total } },
         })
 
-        // Update holding
         const newQty = holding.quantity - quantity
         if (newQty === 0) {
           await tx.holding.delete({ where: { id: holding.id } })
@@ -128,23 +135,25 @@ export async function POST(req: NextRequest) {
           include: { stock: { select: { symbol: true, name: true } } },
         })
 
+        // Apply market impact — price goes down on selling pressure
+        await tx.stock.update({
+          where: { id: stock.id },
+          data: {
+            currentPrice: newMarketPrice,
+            change: newMarketPrice - stock.previousClose,
+            changePercent: ((newMarketPrice - stock.previousClose) / stock.previousClose) * 100,
+          },
+        })
+
         return trade
       })
 
-      const io = (global as any).io
-      if (io) {
-        io.emit('new_trade', {
-          type: 'SELL',
-          symbol: stock.symbol,
-          quantity,
-          price: livePrice,
-          total,
-          userName: user.name,
-          userId: user.id,
-        })
-      }
-
-      return NextResponse.json({ trade: result, message: `Sold ${quantity} shares of ${stock.symbol}` })
+      return NextResponse.json({
+        trade: result,
+        message: `Sold ${quantity} shares of ${stock.symbol}`,
+        realizedPnl: Math.round(realizedPnl * 100) / 100,
+        newPrice: newMarketPrice,
+      })
     }
 
     return NextResponse.json({ error: 'Invalid trade type' }, { status: 400 })
@@ -164,13 +173,15 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
     const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100)
+    const all = searchParams.get('all') === 'true'
 
     const trades = await prisma.trade.findMany({
-      where: { userId: session.user.id },
+      where: all ? {} : { userId: session.user.id },
       orderBy: { createdAt: 'desc' },
       take: limit,
       include: {
         stock: { select: { symbol: true, name: true, currentPrice: true } },
+        user: { select: { name: true, id: true } },
       },
     })
 

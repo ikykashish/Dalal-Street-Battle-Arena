@@ -12,6 +12,7 @@ import { MarketTicker } from '@/components/dashboard/MarketTicker'
 import { ActivityFeed } from '@/components/dashboard/ActivityFeed'
 import { StockTable } from '@/components/market/StockTable'
 import { TradeModal } from '@/components/trading/TradeModal'
+import { LiveStockChart } from '@/components/charts/LiveStockChart'
 import type { Portfolio, Stock, Trade } from '@/types'
 
 export default function DashboardPage() {
@@ -26,7 +27,7 @@ export default function DashboardPage() {
     try {
       const [portfolioRes, stocksRes, tradesRes] = await Promise.all([
         fetch('/api/portfolio'),
-        fetch('/api/stocks?limit=20&sort=marketCap'),
+        fetch('/api/stocks?limit=100&sort=marketCap'),
         fetch('/api/trades?limit=20'),
       ])
       const [pData, sData, tData] = await Promise.all([
@@ -44,9 +45,7 @@ export default function DashboardPage() {
     }
   }
 
-  useEffect(() => {
-    fetchAll()
-  }, [])
+  useEffect(() => { fetchAll() }, [])
 
   const holdingsMap = new Map(portfolio?.holdings.map((h) => [h.stock.id, h.quantity]) || [])
 
@@ -136,21 +135,35 @@ export default function DashboardPage() {
         ))}
       </div>
 
+      {/* Candlestick Chart */}
+      {stocks.length > 0 && (
+        <div className="card">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-text-primary flex items-center gap-2">
+              <BarChart2 className="w-4 h-4 text-brand" />
+              Live Chart · 1-min candles
+            </h2>
+            <span className="text-xs text-text-muted px-2 py-0.5 rounded-full bg-brand/10 text-brand">LIVE</span>
+          </div>
+          <LiveStockChart stocks={stocks} initialSymbol="RELIANCE" />
+        </div>
+      )}
+
       {/* Main content grid */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
-        {/* Market overview */}
+        {/* Market overview — all 100+ stocks */}
         <div className="xl:col-span-2 card">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-text-primary flex items-center gap-2">
               <BarChart2 className="w-4 h-4 text-brand" />
-              Top Stocks
+              All Stocks ({stocks.length})
             </h2>
             <Link href="/market" className="text-xs text-brand hover:text-brand-light">
-              View all →
+              Full market →
             </Link>
           </div>
           <StockTable
-            stocks={stocks.slice(0, 10)}
+            stocks={stocks}
             holdings={holdingsMap}
             cashBalance={portfolio?.cashBalance || 0}
             onBuy={(s) => setTradeModal({ stock: s, type: 'BUY' })}

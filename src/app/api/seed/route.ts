@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     }))
 
     // Single bulk insert — very fast, no timeout
-    const result = await prisma.stock.createMany({
+    const result = await (prisma.stock.createMany as any)({
       data: stocksToInsert,
       skipDuplicates: true,
     })

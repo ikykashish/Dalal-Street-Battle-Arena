@@ -54,16 +54,15 @@ export default function LandingPage() {
           </div>
 
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black text-text-primary mb-6 leading-[1.1] tracking-tight">
-            Trade. Compete.
+            India&apos;s First
             <br />
             <span className="bg-gradient-to-r from-indigo-400 via-violet-400 to-cyan-400 bg-clip-text text-transparent">
-              Dominate.
+              Stock Battle Arena
             </span>
           </h1>
 
-          <p className="text-lg text-text-secondary max-w-xl mx-auto mb-10 leading-relaxed">
-            The ultimate virtual stock market battle arena. Start with <span className="text-emerald-400 font-semibold">₹10 Lakh</span>,
-            build your portfolio, and compete against traders in real-time.
+          <p className="text-lg text-text-secondary max-w-2xl mx-auto mb-10 leading-relaxed">
+            Made by the students of <span className="text-indigo-300 font-semibold">Bharati Vidyapeeth Department of Management Studies (BBA)</span>, Navi Mumbai.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
             pnlPercent: (pnl / INITIAL_CAPITAL) * 100,
           }
         })
-        .sort((a, b) => b.totalValue - a.totalValue)
+        .sort((a, b) => b.pnl - a.pnl)
         .map((t, i) => ({ ...t, rank: i + 1 }))
 
       return NextResponse.json({ leaderboard: ranked, type: 'team' })
@@ -86,7 +86,7 @@ export async function GET(req: NextRequest) {
           pnlPercent: (pnl / INITIAL_CAPITAL) * 100,
         }
       })
-      .sort((a, b) => b.totalValue - a.totalValue)
+      .sort((a, b) => b.pnl - a.pnl)
       .slice(0, limit)
       .map((u, i) => ({ ...u, rank: i + 1 }))
 

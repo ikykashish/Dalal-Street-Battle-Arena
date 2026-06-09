@@ -5,10 +5,15 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, BarChart2, Briefcase,
   Trophy, Users, Bookmark, TrendingUp, LogOut, X,
+  AlertTriangle, Zap,
 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
+import { useSession } from 'next-auth/react'
+import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { BvpLogo } from '@/components/ui/BvpLogo'
+
+const ADMIN_EMAILS = ['pavithandgrover@outlook.com']
 
 const nav = [
   { href: '/dashboard',   icon: LayoutDashboard, label: 'Dashboard',   color: 'text-indigo-400' },
@@ -23,6 +28,33 @@ interface SidebarProps { onClose?: () => void; mobile?: boolean }
 
 export function Sidebar({ onClose, mobile }: SidebarProps) {
   const pathname = usePathname()
+  const { data: session } = useSession()
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [recessionLoading, setRecessionLoading] = useState(false)
+  const [recessionMsg, setRecessionMsg] = useState('')
+  const [confirmOpen, setConfirmOpen] = useState(false)
+
+  useEffect(() => {
+    if (session?.user?.email && ADMIN_EMAILS.includes(session.user.email)) {
+      setIsAdmin(true)
+    }
+  }, [session])
+
+  const triggerRecession = async () => {
+    setConfirmOpen(false)
+    setRecessionLoading(true)
+    setRecessionMsg('')
+    try {
+      const res = await fetch('/api/admin/recession', { method: 'POST' })
+      const data = await res.json()
+      setRecessionMsg(res.ok ? `✅ ${data.message}` : `❌ ${data.error}`)
+    } catch {
+      setRecessionMsg('❌ Request failed')
+    } finally {
+      setRecessionLoading(false)
+      setTimeout(() => setRecessionMsg(''), 6000)
+    }
+  }
 
   return (
     <aside className={cn(
@@ -77,6 +109,51 @@ export function Sidebar({ onClose, mobile }: SidebarProps) {
             </Link>
           )
         })}
+
+        {/* Admin: Recession Round button */}
+        {isAdmin && (
+          <div className="pt-3 mt-3 border-t border-border/40">
+            <div className="px-3 mb-2 flex items-center gap-1.5">
+              <Zap className="w-3 h-3 text-orange-400" />
+              <span className="text-[10px] font-semibold text-orange-400 uppercase tracking-wider">Admin Controls</span>
+            </div>
+
+            {!confirmOpen ? (
+              <button
+                onClick={() => setConfirmOpen(true)}
+                disabled={recessionLoading}
+                className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-sm font-medium text-orange-300 hover:text-white hover:bg-orange-600/90 border border-orange-500/30 hover:border-orange-500/60 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <AlertTriangle className="w-4 h-4 shrink-0 text-orange-400" />
+                {recessionLoading ? 'Triggering…' : 'Recession Round'}
+              </button>
+            ) : (
+              <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-3 space-y-2">
+                <p className="text-xs text-orange-200 leading-snug">
+                  ⚠️ Drop <strong>all stocks by 10%</strong> immediately for all users?
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={triggerRecession}
+                    className="flex-1 py-1.5 text-xs font-bold bg-orange-600 hover:bg-orange-500 text-white rounded-lg transition-colors"
+                  >
+                    Yes, trigger!
+                  </button>
+                  <button
+                    onClick={() => setConfirmOpen(false)}
+                    className="flex-1 py-1.5 text-xs font-medium bg-background-tertiary hover:bg-background-hover text-text-secondary rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {recessionMsg && (
+              <p className="mt-2 px-3 text-[11px] text-orange-200 leading-snug">{recessionMsg}</p>
+            )}
+          </div>
+        )}
       </nav>
 
       {/* Footer */}
