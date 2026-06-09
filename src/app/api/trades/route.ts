@@ -8,6 +8,7 @@ const tradeSchema = z.object({
   stockId: z.string(),
   type: z.enum(['BUY', 'SELL']),
   quantity: z.number().int().positive().max(100000),
+  clientPrice: z.number().positive().optional(),
 })
 
 export async function POST(req: NextRequest) {
@@ -16,7 +17,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { stockId, type, quantity } = tradeSchema.parse(body)
+    const { stockId, type, quantity, clientPrice } = tradeSchema.parse(body)
 
     const [user, stock] = await Promise.all([
       prisma.user.findUnique({ where: { id: session.user.id } }),
@@ -27,9 +28,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'User or stock not found' }, { status: 404 })
     }
 
-    // Use live price if available
-    const priceCache = (global as any).priceCache as Map<string, any> | undefined
-    const livePrice = priceCache?.get(stock.symbol)?.price ?? stock.currentPrice
+    // Use client-supplied live price if it's within ±10% of DB price (anti-cheat check)
+    // Falls back to DB price if no client price supplied or if it looks manipulated
+    let livePrice = stock.currentPrice
+    if (clientPrice) {
+      const deviation = Math.abs(clientPrice - stock.currentPrice) / stock.currentPrice
+      if (deviation <= 0.10) {
+        livePrice = clientPrice  // ✅ Within 10% — use the live simulated price
+      }
+      // If > 10% deviation, silently fall back to DB price (price manipulation attempt)
+    }
     const total = livePrice * quantity
 
     if (type === 'BUY') {

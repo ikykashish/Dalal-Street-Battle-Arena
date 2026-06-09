@@ -35,7 +35,7 @@ export function TradeModal({ stock, type, availableQty = 0, cashBalance, onClose
       const res = await fetch('/api/trades', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stockId: stock.id, type, quantity }),
+        body: JSON.stringify({ stockId: stock.id, type, quantity, clientPrice: price }),
       })
       const data = await res.json()
       if (!res.ok) {
