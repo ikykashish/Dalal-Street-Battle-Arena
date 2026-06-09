@@ -24,6 +24,7 @@ export function BvpLogo({ className, size = 'md', variant = 'full' }: BvpLogoPro
         width={w}
         height={h}
         className="object-contain"
+        style={{ width: 'auto', height: 'auto', maxWidth: '100%' }}
         priority
       />
     </div>

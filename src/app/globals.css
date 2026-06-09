@@ -138,9 +138,16 @@ body {
 .flash-red   { animation: flashRed  0.8s ease; }
 
 /* Ticker */
+@keyframes ticker {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
 .ticker-container { overflow: hidden; white-space: nowrap; }
 .ticker-content {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 1.5rem;
+  width: max-content;
   animation: ticker 60s linear infinite;
 }
 .ticker-content:hover { animation-play-state: paused; }

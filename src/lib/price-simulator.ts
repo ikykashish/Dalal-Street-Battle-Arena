@@ -25,6 +25,10 @@ export function simulatePrice(
   currentPrice: number,
   previousClose: number
 ): number {
+  // Guard against invalid inputs (prevents NaN poisoning from div-by-zero)
+  if (!Number.isFinite(currentPrice) || currentPrice <= 0) return 0
+  if (!Number.isFinite(previousClose) || previousClose <= 0) previousClose = currentPrice
+
   const bucket = Math.floor(Date.now() / 4000) // new value every 4 seconds
   const seed = hashCode(`${symbol}:${bucket}`)
   const rand = seededRandom(seed)

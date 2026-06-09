@@ -100,14 +100,21 @@ function CandleSVG({
   const cw = w - PAD.left - PAD.right
   const ch = h - PAD.top - PAD.bottom
 
+  // Only use finite numbers in the price domain (guards against NaN breaking the SVG)
+  const safeLive = Number.isFinite(livePrice) && livePrice > 0 ? livePrice : previousClose
+  const prices = candles
+    .flatMap((c) => [c.high, c.low])
+    .filter((p) => Number.isFinite(p) && p > 0)
+  const domain = [...prices, previousClose, safeLive].filter((p) => Number.isFinite(p) && p > 0)
+  if (domain.length === 0) return null
+
   // Price domain with padding
-  const prices = candles.flatMap((c) => [c.high, c.low])
-  const rawMin = Math.min(...prices, previousClose, livePrice)
-  const rawMax = Math.max(...prices, previousClose, livePrice)
+  const rawMin = Math.min(...domain)
+  const rawMax = Math.max(...domain)
   const span = rawMax - rawMin || 1
   const minP = rawMin - span * 0.06
   const maxP = rawMax + span * 0.06
-  const range = maxP - minP
+  const range = maxP - minP || 1
 
   const py = (p: number) => PAD.top + ((maxP - p) / range) * ch
   const step = cw / candles.length
@@ -133,10 +140,10 @@ function CandleSVG({
       style={{ fontFamily: 'var(--font-mono, monospace)' }}
     >
       {/* Grid lines + Y labels */}
-      {gridPrices.map((p) => {
+      {gridPrices.map((p, gi) => {
         const yy = py(p)
         return (
-          <g key={p}>
+          <g key={`grid-${gi}`}>
             <line
               x1={PAD.left}
               y1={yy}
@@ -197,10 +204,10 @@ function CandleSVG({
       {/* Live price line */}
       <line
         x1={PAD.left}
-        y1={py(livePrice)}
+        y1={py(safeLive)}
         x2={w - PAD.right}
-        y2={py(livePrice)}
-        stroke={livePrice >= previousClose ? '#26a69a' : '#ef5350'}
+        y2={py(safeLive)}
+        stroke={safeLive >= previousClose ? '#26a69a' : '#ef5350'}
         strokeWidth={1.5}
         strokeDasharray="2,3"
         opacity={0.7}
@@ -261,6 +268,7 @@ export function LiveStockChart({ stocks, initialSymbol }: LiveStockChartProps) {
 
   // Update last candle's close with live price every 4 s
   useEffect(() => {
+    if (!Number.isFinite(livePrice) || livePrice <= 0) return
     setCandles((prev) => {
       if (!prev.length) return prev
       const next = [...prev]

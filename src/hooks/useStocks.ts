@@ -54,8 +54,23 @@ export function useLivePrice(symbol: string, initialPrice: number, previousClose
   const prevRef = useRef(initialPrice)
 
   useEffect(() => {
+    // Don't simulate until we have a valid symbol and a real price.
+    // (Prevents NaN when called with placeholder 0/'' before data loads.)
+    if (!symbol || !Number.isFinite(initialPrice) || initialPrice <= 0) return
+
+    const base =
+      Number.isFinite(previousClose) && previousClose > 0 ? previousClose : initialPrice
+
+    // Reset the baseline whenever the stock (symbol or price) changes,
+    // so switching stocks shows the new price immediately instead of a stale one.
+    prevRef.current = initialPrice
+    setPrice(initialPrice)
+    setChange(initialPrice - base)
+    setChangePercent(((initialPrice - base) / base) * 100)
+
     const tick = () => {
-      const newPrice = simulatePrice(symbol, prevRef.current, previousClose)
+      const newPrice = simulatePrice(symbol, prevRef.current, base)
+      if (!Number.isFinite(newPrice) || newPrice <= 0) return // never propagate NaN
       const dir = newPrice > prevRef.current ? 'up' : newPrice < prevRef.current ? 'down' : null
       if (dir) {
         setFlash(dir)
@@ -63,14 +78,13 @@ export function useLivePrice(symbol: string, initialPrice: number, previousClose
       }
       prevRef.current = newPrice
       setPrice(newPrice)
-      setChange(newPrice - previousClose)
-      setChangePercent(((newPrice - previousClose) / previousClose) * 100)
+      setChange(newPrice - base)
+      setChangePercent(((newPrice - base) / base) * 100)
     }
 
-    tick() // run immediately
     const interval = setInterval(tick, 4000)
     return () => clearInterval(interval)
-  }, [symbol, previousClose])
+  }, [symbol, initialPrice, previousClose])
 
   return { price, change, changePercent, flash }
 }
