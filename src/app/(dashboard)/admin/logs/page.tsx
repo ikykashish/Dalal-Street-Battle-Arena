@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
   ScrollText, RefreshCw, ChevronLeft, ChevronRight,
-  UserX, Ban, IndianRupee, Trash2, TrendingDown, ShieldCheck,
+  UserX, Ban, IndianRupee, Trash2, TrendingDown, TrendingUp, ShieldCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AdminGuard } from '@/components/admin/AdminGuard'
@@ -16,6 +16,7 @@ const ACTION_META: Record<string, { label: string; icon: any; color: string }> =
   USER_PENALISED: { label: 'User Penalised', icon: IndianRupee, color: 'text-orange-400 bg-orange-500/10 border-orange-500/30' },
   USER_DELETED: { label: 'User Deleted', icon: Trash2, color: 'text-rose-400 bg-rose-500/10 border-rose-500/30' },
   RECESSION_TRIGGERED: { label: 'Recession Triggered', icon: TrendingDown, color: 'text-purple-400 bg-purple-500/10 border-purple-500/30' },
+  STOCK_UP: { label: 'Stock Up (+5%)', icon: TrendingUp, color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' },
 }
 
 const FILTERS = [
@@ -25,6 +26,7 @@ const FILTERS = [
   { key: 'USER_PENALISED', label: 'Penalised' },
   { key: 'USER_DELETED', label: 'Deleted' },
   { key: 'RECESSION_TRIGGERED', label: 'Recession' },
+  { key: 'STOCK_UP', label: 'Stock Up' },
 ]
 
 function fmtDate(d: string) {

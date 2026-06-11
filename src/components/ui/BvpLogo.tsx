@@ -14,10 +14,10 @@ const NATURAL_W = 1280
 const NATURAL_H = 428
 
 const heights: Record<NonNullable<BvpLogoProps['size']>, number> = {
-  sm: 32,
-  md: 44,
-  lg: 60,
-  xl: 80,
+  sm: 52,
+  md: 64,
+  lg: 84,
+  xl: 104,
 }
 
 export function BvpLogo({ className, size = 'md' }: BvpLogoProps) {

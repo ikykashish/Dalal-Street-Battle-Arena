@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, BarChart2, Briefcase,
   Trophy, Users, Bookmark, TrendingUp, LogOut, X,
-  AlertTriangle, Zap, Eye, ScrollText,
+  AlertTriangle, Zap, Eye, ScrollText, Rocket,
 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { useSession } from 'next-auth/react'
@@ -32,6 +32,9 @@ export function Sidebar({ onClose, mobile }: SidebarProps) {
   const [recessionLoading, setRecessionLoading] = useState(false)
   const [recessionMsg, setRecessionMsg] = useState('')
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [stockUpLoading, setStockUpLoading] = useState(false)
+  const [stockUpMsg, setStockUpMsg] = useState('')
+  const [stockUpConfirmOpen, setStockUpConfirmOpen] = useState(false)
 
   useEffect(() => {
     setIsAdmin(isAdminEmail(session?.user?.email))
@@ -50,6 +53,22 @@ export function Sidebar({ onClose, mobile }: SidebarProps) {
     } finally {
       setRecessionLoading(false)
       setTimeout(() => setRecessionMsg(''), 6000)
+    }
+  }
+
+  const triggerStockUp = async () => {
+    setStockUpConfirmOpen(false)
+    setStockUpLoading(true)
+    setStockUpMsg('')
+    try {
+      const res = await fetch('/api/admin/stockup', { method: 'POST' })
+      const data = await res.json()
+      setStockUpMsg(res.ok ? `✅ ${data.message}` : `❌ ${data.error}`)
+    } catch {
+      setStockUpMsg('❌ Request failed')
+    } finally {
+      setStockUpLoading(false)
+      setTimeout(() => setStockUpMsg(''), 6000)
     }
   }
 
@@ -175,6 +194,44 @@ export function Sidebar({ onClose, mobile }: SidebarProps) {
                   </Link>
                 )
               })}
+            </div>
+
+            {/* Stock Up button (green) — raises all stocks 5% */}
+            <div className="mt-1">
+              {!stockUpConfirmOpen ? (
+                <button
+                  onClick={() => setStockUpConfirmOpen(true)}
+                  disabled={stockUpLoading}
+                  className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-sm font-bold text-emerald-300 hover:text-white hover:bg-emerald-600/90 border border-emerald-500/30 hover:border-emerald-500/60 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Rocket className="w-4 h-4 shrink-0 text-emerald-400" />
+                  {stockUpLoading ? 'Boosting…' : 'STOCK UP'}
+                </button>
+              ) : (
+                <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 space-y-2">
+                  <p className="text-xs text-emerald-200 leading-snug">
+                    🚀 Raise <strong>all stocks by 5%</strong> immediately for all users?
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={triggerStockUp}
+                      className="flex-1 py-1.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors"
+                    >
+                      Yes, boost!
+                    </button>
+                    <button
+                      onClick={() => setStockUpConfirmOpen(false)}
+                      className="flex-1 py-1.5 text-xs font-medium bg-background-tertiary hover:bg-background-hover text-text-secondary rounded-lg transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {stockUpMsg && (
+                <p className="mt-2 px-3 text-[11px] text-emerald-200 leading-snug">{stockUpMsg}</p>
+              )}
             </div>
           </div>
         )}
