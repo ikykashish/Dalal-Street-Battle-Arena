@@ -69,23 +69,34 @@ export async function GET(req: NextRequest) {
       take: limit * 2, // fetch more to rank properly
     })
 
-    const ranked = users
-      .map((user) => {
-        let holdingsValue = 0
-        for (const h of user.holdings) {
-          const livePrice = priceCache?.get(h.stock.symbol)?.price ?? h.stock.currentPrice
-          holdingsValue += livePrice * h.quantity
-        }
-        const totalValue = user.cashBalance + holdingsValue
-        const pnl = totalValue - INITIAL_CAPITAL
-        return {
-          userId: user.id,
-          name: user.name,
-          totalValue,
-          pnl,
-          pnlPercent: (pnl / INITIAL_CAPITAL) * 100,
-        }
-      })
+    const mapped = users.map((user) => {
+      let holdingsValue = 0
+      for (const h of user.holdings) {
+        const livePrice = priceCache?.get(h.stock.symbol)?.price ?? h.stock.currentPrice
+        holdingsValue += livePrice * h.quantity
+      }
+      const totalValue = user.cashBalance + holdingsValue
+      const pnl = totalValue - INITIAL_CAPITAL
+      return {
+        userId: user.id,
+        name: user.name,
+        totalValue,
+        pnl,
+        pnlPercent: (pnl / INITIAL_CAPITAL) * 100,
+      }
+    })
+
+    // Deduplicate by userId (never by display name) — keep the highest-value
+    // entry so a user can never appear twice on the leaderboard.
+    const byUser = new Map<string, (typeof mapped)[number]>()
+    for (const entry of mapped) {
+      const existing = byUser.get(entry.userId)
+      if (!existing || entry.totalValue > existing.totalValue) {
+        byUser.set(entry.userId, entry)
+      }
+    }
+
+    const ranked = Array.from(byUser.values())
       .sort((a, b) => b.pnl - a.pnl)
       .slice(0, limit)
       .map((u, i) => ({ ...u, rank: i + 1 }))

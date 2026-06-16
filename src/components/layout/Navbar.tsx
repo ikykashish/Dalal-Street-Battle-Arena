@@ -21,7 +21,8 @@ export function Navbar({ onMenuClick, cashBalance }: NavbarProps) {
       <div className="flex items-center gap-3">
         <button
           onClick={onMenuClick}
-          className="lg:hidden p-1.5 text-text-muted hover:text-text-primary hover:bg-background-hover rounded-xl"
+          className="md:hidden p-1.5 text-text-muted hover:text-text-primary hover:bg-background-hover rounded-xl"
+          aria-label="Open navigation menu"
         >
           <Menu className="w-5 h-5" />
         </button>

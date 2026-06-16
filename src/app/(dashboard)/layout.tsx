@@ -49,14 +49,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex h-screen bg-background-primary overflow-hidden">
-      {/* Desktop sidebar */}
-      <div className="hidden lg:flex shrink-0">
+      {/* Desktop sidebar — persistent at >=768px (md) */}
+      <div className="hidden md:flex shrink-0">
         <Sidebar />
       </div>
 
-      {/* Mobile sidebar overlay */}
+      {/* Mobile sidebar overlay — only < 768px */}
       {sidebarOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
+        <div className="fixed inset-0 z-50 md:hidden">
           <div
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => setSidebarOpen(false)}
