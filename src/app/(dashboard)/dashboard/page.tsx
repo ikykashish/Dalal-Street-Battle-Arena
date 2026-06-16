@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { formatCurrency, formatPercent, cn } from '@/lib/utils'
+import { applySimulation } from '@/lib/price-simulator'
 import { MarketTicker } from '@/components/dashboard/MarketTicker'
 import { ActivityFeed } from '@/components/dashboard/ActivityFeed'
 import { StockTable } from '@/components/market/StockTable'
@@ -46,6 +47,15 @@ export default function DashboardPage() {
   }
 
   useEffect(() => { fetchAll() }, [])
+
+  // Single shared price simulation — ticker, table and chart stay in sync.
+  useEffect(() => {
+    if (stocks.length === 0) return
+    const interval = setInterval(() => {
+      setStocks((prev) => applySimulation(prev))
+    }, 4000)
+    return () => clearInterval(interval)
+  }, [stocks.length])
 
   const holdingsMap = new Map(portfolio?.holdings.map((h) => [h.stock.id, h.quantity]) || [])
 

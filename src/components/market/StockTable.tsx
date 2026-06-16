@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { TrendingUp, TrendingDown, Star } from 'lucide-react'
-import { formatPrice, formatPercent, formatBigNumber, cn } from '@/lib/utils'
+import { TrendingUp, TrendingDown, Star, Plus, Minus } from 'lucide-react'
+import { formatPrice, formatPercent, formatChange, formatBigNumber, cn } from '@/lib/utils'
 import type { Stock } from '@/types'
 
 interface StockTableProps {
@@ -101,7 +101,7 @@ export function StockTable({
                 </td>
                 <td className="px-3 py-2.5">
                   <span className={cn('font-mono text-xs', isUp ? 'text-profit' : 'text-loss')}>
-                    {isUp ? '+' : ''}{stock.change.toFixed(2)}
+                    {isUp ? '▲ ' : '▼ '}{formatChange(stock.change)}
                   </span>
                 </td>
                 <td className="px-3 py-2.5">
@@ -120,14 +120,15 @@ export function StockTable({
                   <span className="text-xs text-text-muted">{stock.sector}</span>
                 </td>
                 <td className="px-3 py-2.5">
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-1.5 justify-end">
                     {onWatchlistToggle && (
                       <button
                         onClick={(e) => { e.stopPropagation(); onWatchlistToggle(stock) }}
                         className={cn(
                           'p-1 rounded hover:bg-background-tertiary transition-colors',
-                          watchlistIds.has(stock.id) ? 'text-warning' : 'text-text-muted'
+                          watchlistIds.has(stock.id) ? 'text-warning' : 'text-text-muted opacity-60 hover:opacity-100'
                         )}
+                        aria-label={watchlistIds.has(stock.id) ? `Remove ${stock.symbol} from watchlist` : `Add ${stock.symbol} to watchlist`}
                         title={watchlistIds.has(stock.id) ? 'Remove from watchlist' : 'Add to watchlist'}
                       >
                         <Star className="w-3.5 h-3.5" fill={watchlistIds.has(stock.id) ? 'currentColor' : 'none'} />
@@ -136,17 +137,21 @@ export function StockTable({
                     {onBuy && (
                       <button
                         onClick={(e) => { e.stopPropagation(); onBuy(stock) }}
-                        className="px-2 py-1 text-xs bg-profit/10 text-profit hover:bg-profit/20 rounded font-medium transition-colors"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 text-xs bg-profit/15 text-profit hover:bg-profit hover:text-white rounded-full font-semibold transition-colors"
+                        aria-label={`Buy ${stock.symbol}`}
                       >
-                        B
+                        <Plus className="w-3 h-3" /> Buy
                       </button>
                     )}
-                    {onSell && held > 0 && (
+                    {onSell && (
                       <button
                         onClick={(e) => { e.stopPropagation(); onSell(stock) }}
-                        className="px-2 py-1 text-xs bg-loss/10 text-loss hover:bg-loss/20 rounded font-medium transition-colors"
+                        disabled={held === 0}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 text-xs bg-loss/15 text-loss hover:bg-loss hover:text-white rounded-full font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-loss/15 disabled:hover:text-loss"
+                        aria-label={held > 0 ? `Sell ${stock.symbol}` : `You don't own ${stock.symbol}`}
+                        title={held > 0 ? `Sell ${stock.symbol}` : 'You don\'t own this stock'}
                       >
-                        S
+                        <Minus className="w-3 h-3" /> Sell
                       </button>
                     )}
                   </div>

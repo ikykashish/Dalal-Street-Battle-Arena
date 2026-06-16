@@ -1,39 +1,36 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import { TrendingUp, TrendingDown } from 'lucide-react'
 import { formatPrice, cn } from '@/lib/utils'
-import { applySimulation } from '@/lib/price-simulator'
 import type { Stock } from '@/types'
 
 interface MarketTickerProps {
   stocks: Stock[]
 }
 
-export function MarketTicker({ stocks: initialStocks }: MarketTickerProps) {
-  const [stocks, setStocks] = useState(() => applySimulation(initialStocks.slice(0, 20)))
+/**
+ * Presentational scrolling ticker. It renders whatever `stocks` the parent
+ * passes — it does NOT simulate prices itself. The parent page runs a single
+ * shared price simulation and passes the same array here and to the stock
+ * table, so all price displays stay in sync.
+ */
+export function MarketTicker({ stocks }: MarketTickerProps) {
+  if (!stocks || stocks.length === 0) return null
 
-  useEffect(() => {
-    setStocks(applySimulation(initialStocks.slice(0, 20)))
-  }, [initialStocks])
-
-  // Simulate live prices every 4s for the ticker
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setStocks((prev) => applySimulation(prev))
-    }, 4000)
-    return () => clearInterval(interval)
-  }, [])
-
-  if (stocks.length === 0) return null
-
-  const doubled = [...stocks, ...stocks]
+  const display = stocks.slice(0, 20)
+  // Duplicate the set for the seamless infinite-scroll CSS trick.
+  const doubled = [...display, ...display]
 
   return (
     <div className="bg-background-secondary border-b border-border overflow-hidden py-2 ticker-container">
-      <div className="ticker-content">
+      <div className="ticker-content" aria-label="Live stock prices">
         {doubled.map((stock, i) => (
-          <div key={`${stock.symbol}-${i}`} className="flex items-center gap-2 whitespace-nowrap">
+          <div
+            key={`${stock.symbol}-${i}`}
+            // Second (duplicate) half is decorative — hide from screen readers.
+            aria-hidden={i >= display.length}
+            className="flex items-center gap-2 whitespace-nowrap"
+          >
             <span className="text-xs font-mono font-semibold text-text-primary">{stock.symbol}</span>
             <span className="text-xs font-mono text-text-secondary">{formatPrice(stock.currentPrice)}</span>
             <span className={cn(

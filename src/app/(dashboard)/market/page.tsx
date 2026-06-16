@@ -6,6 +6,7 @@ import { StockTable } from '@/components/market/StockTable'
 import { TradeModal } from '@/components/trading/TradeModal'
 import { MarketTicker } from '@/components/dashboard/MarketTicker'
 import { formatPrice, formatPercent, cn } from '@/lib/utils'
+import { applySimulation } from '@/lib/price-simulator'
 import type { Stock } from '@/types'
 
 const SECTORS = ['All', 'IT', 'Banking', 'Energy', 'Pharma', 'Auto', 'FMCG', 'Metal', 'Telecom', 'Power', 'Infrastructure', 'NBFC', 'Finance', 'Healthcare', 'Cement']
@@ -43,6 +44,16 @@ export default function MarketPage() {
   }, [])
 
   useEffect(() => { fetchData() }, [fetchData])
+
+  // Single shared price simulation — ticker and table both read from `stocks`,
+  // so every price display on the page stays in sync.
+  useEffect(() => {
+    if (stocks.length === 0) return
+    const interval = setInterval(() => {
+      setStocks((prev) => applySimulation(prev))
+    }, 4000)
+    return () => clearInterval(interval)
+  }, [stocks.length])
 
   useEffect(() => {
     let result = [...stocks]
