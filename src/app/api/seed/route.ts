@@ -5,26 +5,34 @@ import { STOCKS_DATA } from '@/lib/stocks-data'
 const SEED_SECRET = process.env.SEED_SECRET || 'dalal-seed-2024'
 
 /**
- * Seeds / re-syncs all stocks via UPSERT (keyed on symbol).
- * - Inserts any missing stocks (so all 101 are present, covering every sector)
- * - Resets existing stocks' prices back to realistic seed values (undoing any
- *   drift from repeated admin actions / trades that pushed % gains unrealistically high)
- * It never deletes, so it is safe even when users already hold stocks (FK-safe).
+ * Seeds / re-syncs stocks via UPSERT (keyed on symbol) — FK-safe (never deletes).
+ * - Resets existing stocks' prices to realistic seed values (undoes drift)
+ * - Inserts any missing stocks so all 101 + every sector are present
+ *
+ * Supports chunked processing to stay under the serverless time limit on the
+ * production (Neon) database:
+ *   body { secret, start?, count? }
+ * When `count` is omitted it processes everything (fine locally on SQLite).
+ * The response returns `nextStart` (or null when done) so a caller can paginate.
  */
 export async function POST(req: NextRequest) {
   try {
-    const { secret } = await req.json()
+    const body = await req.json().catch(() => ({}))
+    const { secret, start = 0, count } = body as { secret?: string; start?: number; count?: number }
+
     if (secret !== SEED_SECRET) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    let upserted = 0
-    const CHUNK = 12 // batch to stay well under the serverless time limit
+    const total = STOCKS_DATA.length
+    const sliceCount = typeof count === 'number' && count > 0 ? count : total
+    const slice = STOCKS_DATA.slice(start, start + sliceCount)
 
-    for (let i = 0; i < STOCKS_DATA.length; i += CHUNK) {
-      const slice = STOCKS_DATA.slice(i, i + CHUNK)
+    const CHUNK = 6 // small concurrency to respect the connection pool
+    for (let i = 0; i < slice.length; i += CHUNK) {
+      const sub = slice.slice(i, i + CHUNK)
       await Promise.all(
-        slice.map((s) => {
+        sub.map((s) => {
           const fields = {
             name: s.name,
             sector: s.sector,
@@ -48,14 +56,18 @@ export async function POST(req: NextRequest) {
           })
         })
       )
-      upserted += slice.length
     }
 
-    const total = await prisma.stock.count()
+    const nextStart = start + sliceCount
+    const done = nextStart >= total
+
     return NextResponse.json({
-      message: `Synced ${upserted} stocks (prices reset, missing stocks added). DB now has ${total} stocks.`,
-      upserted,
+      processed: slice.length,
+      start,
+      count: sliceCount,
+      nextStart: done ? null : nextStart,
       total,
+      done,
     })
   } catch (err) {
     console.error('Seed error:', err)
