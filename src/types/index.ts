@@ -4,6 +4,8 @@ export interface Stock {
   name: string
   sector: string
   currentPrice: number
+  /** Stable reference price (DB value) used by the live-price simulator. */
+  basePrice?: number
   previousClose: number
   open: number
   dayHigh: number

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { livePrice } from '@/lib/price-simulator'
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -21,8 +22,6 @@ export async function GET(req: NextRequest) {
 
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
-    const priceCache = (global as any).priceCache as Map<string, any> | undefined
-
     const INITIAL_CAPITAL = 1000000
 
     let totalInvested = 0
@@ -30,9 +29,11 @@ export async function GET(req: NextRequest) {
     let dayPnL = 0
 
     const holdings = user.holdings.map((h) => {
-      const live = priceCache?.get(h.stock.symbol)
-      const currentPrice = live?.price ?? h.stock.currentPrice
+      // Single source of truth: same deterministic live price the client shows.
+      const currentPrice = livePrice(h.stock.symbol, h.stock.currentPrice)
       const prevClose = h.stock.previousClose
+      const change = Math.round((currentPrice - prevClose) * 100) / 100
+      const changePercent = Math.round(((currentPrice - prevClose) / prevClose) * 10000) / 100
 
       const invested = h.avgPrice * h.quantity
       const current = currentPrice * h.quantity
@@ -51,9 +52,10 @@ export async function GET(req: NextRequest) {
         stock: {
           ...h.stock,
           volume: Number(h.stock.volume),
+          basePrice: h.stock.currentPrice,
           currentPrice,
-          change: live?.change ?? h.stock.change,
-          changePercent: live?.changePercent ?? h.stock.changePercent,
+          change,
+          changePercent,
         },
         currentValue: current,
         investedValue: invested,

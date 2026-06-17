@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { applySimulation, simulatePrice } from '@/lib/price-simulator'
+import { applySimulation, livePrice } from '@/lib/price-simulator'
 import type { Stock } from '@/types'
 
 /** Fetches stocks once then simulates live prices client-side every 4 seconds */
@@ -61,15 +61,11 @@ export function useLivePrice(symbol: string, initialPrice: number, previousClose
     const base =
       Number.isFinite(previousClose) && previousClose > 0 ? previousClose : initialPrice
 
-    // Reset the baseline whenever the stock (symbol or price) changes,
-    // so switching stocks shows the new price immediately instead of a stale one.
-    prevRef.current = initialPrice
-    setPrice(initialPrice)
-    setChange(initialPrice - base)
-    setChangePercent(((initialPrice - base) / base) * 100)
-
+    // Path-independent: always compute from the stable DB base price (initialPrice)
+    // for the current time bucket, so this matches the market list, server values
+    // and every other client exactly.
     const tick = () => {
-      const newPrice = simulatePrice(symbol, prevRef.current, base)
+      const newPrice = livePrice(symbol, initialPrice)
       if (!Number.isFinite(newPrice) || newPrice <= 0) return // never propagate NaN
       const dir = newPrice > prevRef.current ? 'up' : newPrice < prevRef.current ? 'down' : null
       if (dir) {
@@ -78,10 +74,11 @@ export function useLivePrice(symbol: string, initialPrice: number, previousClose
       }
       prevRef.current = newPrice
       setPrice(newPrice)
-      setChange(newPrice - base)
-      setChangePercent(((newPrice - base) / base) * 100)
+      setChange(Math.round((newPrice - base) * 100) / 100)
+      setChangePercent(Math.round(((newPrice - base) / base) * 10000) / 100)
     }
 
+    tick() // run immediately so the price is live on mount
     const interval = setInterval(tick, 4000)
     return () => clearInterval(interval)
   }, [symbol, initialPrice, previousClose])

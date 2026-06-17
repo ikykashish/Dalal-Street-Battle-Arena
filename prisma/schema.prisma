@@ -17,14 +17,31 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  team      Team?           @relation(fields: [teamId], references: [id])
-  teamId    String?
-  holdings  Holding[]
-  trades    Trade[]
-  watchlist WatchlistItem[]
-  penalties Penalty[]
+  team          Team?           @relation(fields: [teamId], references: [id])
+  teamId        String?
+  holdings      Holding[]
+  trades        Trade[]
+  watchlist     WatchlistItem[]
+  penalties     Penalty[]
+  notifications Notification[]
 
   @@index([teamId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  title     String
+  message   String
+  type      String   @default("INFO") // INFO | SUCCESS | WARNING | TRADE | MARKET | ADMIN
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  @@index([userId])
+  @@index([userId, isRead])
+  @@index([createdAt])
 }
 
 model Penalty {

@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   Briefcase, TrendingUp, TrendingDown, DollarSign,
   PieChart, RefreshCw, CheckCircle, Clock,
 } from 'lucide-react'
 import {
-  PieChart as RechartsPie, Pie, Cell, Tooltip, ResponsiveContainer,
+  PieChart as RechartsPie, Pie, Cell, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
 import { TradeModal } from '@/components/trading/TradeModal'
 import { ActivityFeed } from '@/components/dashboard/ActivityFeed'
@@ -15,13 +15,32 @@ import type { Portfolio, Stock, Trade } from '@/types'
 
 const COLORS = ['#387ed1', '#53b987', '#eb5757', '#f59e0b', '#a78bfa', '#22d3ee', '#f472b6', '#60a5fa']
 
+const RADIAN = Math.PI / 180
+function PieLabel({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }: any) {
+  if (percent < 0.04) return null // skip tiny slices
+  const radius = innerRadius + (outerRadius - innerRadius) * 1.35
+  const x = cx + radius * Math.cos(-midAngle * RADIAN)
+  const y = cy + radius * Math.sin(-midAngle * RADIAN)
+  return (
+    <text
+      x={x} y={y}
+      textAnchor={x > cx ? 'start' : 'end'}
+      dominantBaseline="central"
+      fontSize={10}
+      fill="#a0a0a0"
+    >
+      {name} {(percent * 100).toFixed(1)}%
+    </text>
+  )
+}
+
 export default function PortfolioPage() {
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null)
   const [trades, setTrades] = useState<Trade[]>([])
   const [loading, setLoading] = useState(true)
   const [tradeModal, setTradeModal] = useState<{ stock: Stock; type: 'BUY' | 'SELL' } | null>(null)
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [pRes, tRes] = await Promise.all([
         fetch('/api/portfolio'),
@@ -33,9 +52,21 @@ export default function PortfolioPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  useEffect(() => { fetchData() }, [])
+  useEffect(() => { fetchData() }, [fetchData])
+
+  // Live P&L polling every 8 seconds
+  useEffect(() => {
+    const t = setInterval(async () => {
+      try {
+        const res = await fetch('/api/portfolio')
+        const data = await res.json()
+        if (data.portfolio) setPortfolio(data.portfolio)
+      } catch {}
+    }, 8000)
+    return () => clearInterval(t)
+  }, [])
 
   if (loading) {
     return (
@@ -48,6 +79,8 @@ export default function PortfolioPage() {
   if (!portfolio) {
     return <div className="text-center py-16 text-text-muted">Failed to load portfolio</div>
   }
+
+  const totalAllocated = portfolio.cashBalance + portfolio.currentValue || 1
 
   // Allocation chart data
   const allocationData = [
@@ -238,41 +271,53 @@ export default function PortfolioPage() {
               Allocation
             </h2>
             {allocationData.length > 1 ? (
-              <ResponsiveContainer width="100%" height={180}>
-                <RechartsPie>
-                  <Pie
-                    data={allocationData}
-                    cx="50%" cy="50%"
-                    innerRadius={45} outerRadius={75}
-                    dataKey="value"
-                    paddingAngle={2}
-                  >
-                    {allocationData.map((_, i) => (
-                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(v: any) => [formatCurrency(v), '']}
-                    contentStyle={{ background: '#1e1e1e', border: '1px solid #2a2a2a', borderRadius: '8px', color: '#e8e8e8' }}
-                  />
-                </RechartsPie>
-              </ResponsiveContainer>
+              <>
+                <ResponsiveContainer width="100%" height={240}>
+                  <RechartsPie>
+                    <Pie
+                      data={allocationData}
+                      cx="50%" cy="50%"
+                      innerRadius={50} outerRadius={80}
+                      dataKey="value"
+                      paddingAngle={2}
+                      labelLine={false}
+                      label={PieLabel}
+                    >
+                      {allocationData.map((_, i) => (
+                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(v: any, name: string) => {
+                        const pct = ((v / totalAllocated) * 100).toFixed(1)
+                        return [`${formatCurrency(v)} (${pct}%)`, name]
+                      }}
+                      contentStyle={{ background: '#1e1e1e', border: '1px solid #2a2a2a', borderRadius: '8px', color: '#e8e8e8' }}
+                    />
+                  </RechartsPie>
+                </ResponsiveContainer>
+                {/* Legend */}
+                <div className="space-y-1.5 mt-1">
+                  {allocationData.map((d, i) => {
+                    const pct = ((d.value / totalAllocated) * 100).toFixed(1)
+                    return (
+                      <div key={d.name} className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-2 h-2 rounded-full shrink-0" style={{ background: COLORS[i % COLORS.length] }} />
+                          <span className="text-text-secondary truncate max-w-[110px]">{d.name}</span>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="font-mono text-text-primary">{pct}%</span>
+                          <span className="font-mono text-text-muted text-[10px]">{formatCurrency(d.value)}</span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </>
             ) : (
               <div className="text-center py-8 text-text-muted text-sm">100% Cash</div>
             )}
-            <div className="space-y-1.5 mt-2">
-              {allocationData.slice(0, 6).map((d, i) => (
-                <div key={d.name} className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full" style={{ background: COLORS[i % COLORS.length] }} />
-                    <span className="text-text-secondary">{d.name}</span>
-                  </div>
-                  <span className="font-mono text-text-primary">
-                    {((d.value / portfolio.totalValue) * 100).toFixed(1)}%
-                  </span>
-                </div>
-              ))}
-            </div>
           </div>
 
           {/* P&L summary */}

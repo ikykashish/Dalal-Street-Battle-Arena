@@ -49,18 +49,13 @@ export async function GET(req: NextRequest) {
       },
     })
 
-    // Merge with live cache if available
-    const priceCache = (global as any).priceCache as Map<string, any> | undefined
-    const enriched = stocks.map((s) => {
-      const live = priceCache?.get(s.symbol)
-      return {
-        ...s,
-        volume: Number(s.volume),
-        currentPrice: live?.price ?? s.currentPrice,
-        change: live?.change ?? s.change,
-        changePercent: live?.changePercent ?? s.changePercent,
-      }
-    })
+    // Expose the stable DB price as basePrice so the client-side simulator
+    // can always recompute from the same reference point (path-independent).
+    const enriched = stocks.map((s) => ({
+      ...s,
+      volume: Number(s.volume),
+      basePrice: s.currentPrice,
+    }))
 
     return NextResponse.json({ stocks: enriched })
   } catch (err) {

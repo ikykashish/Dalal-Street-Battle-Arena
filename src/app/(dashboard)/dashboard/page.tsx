@@ -57,6 +57,18 @@ export default function DashboardPage() {
     return () => clearInterval(interval)
   }, [stocks.length])
 
+  // Live portfolio P&L polling every 10 seconds (independent of stock sim)
+  useEffect(() => {
+    const t = setInterval(async () => {
+      try {
+        const res = await fetch('/api/portfolio')
+        const data = await res.json()
+        if (data.portfolio) setPortfolio(data.portfolio)
+      } catch {}
+    }, 10000)
+    return () => clearInterval(t)
+  }, [])
+
   const holdingsMap = new Map(portfolio?.holdings.map((h) => [h.stock.id, h.quantity]) || [])
 
   if (loading) {

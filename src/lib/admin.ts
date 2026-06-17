@@ -42,6 +42,8 @@ export async function writeAdminLog(entry: {
     | 'USER_DELETED'
     | 'RECESSION_TRIGGERED'
     | 'STOCK_UP'
+    | 'INDUSTRY_BOOST'
+    | 'INDUSTRY_RECESSION'
   adminEmail: string
   targetUserId?: string | null
   targetName?: string | null

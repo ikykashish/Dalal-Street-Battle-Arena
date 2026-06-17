@@ -6,6 +6,7 @@ import {
   LayoutDashboard, BarChart2, Briefcase,
   Trophy, Users, Bookmark, TrendingUp, LogOut, X,
   AlertTriangle, Zap, Eye, ScrollText, Rocket,
+  TrendingDown, ChevronDown,
 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { useSession } from 'next-auth/react'
@@ -13,6 +14,13 @@ import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { isAdminEmail } from '@/lib/admin-emails'
 import { BvpLogo } from '@/components/ui/BvpLogo'
+
+const SECTORS = [
+  'Finance', 'Banking', 'Technology', 'Healthcare', 'Energy',
+  'Manufacturing', 'Consumer Goods', 'Education', 'Infrastructure',
+  'Automobile', 'Pharmaceuticals', 'Telecom', 'Media & Entertainment',
+  'Real Estate', 'FMCG',
+]
 
 const nav = [
   { href: '/dashboard',   icon: LayoutDashboard, label: 'Dashboard',   color: 'text-indigo-400' },
@@ -25,16 +33,29 @@ const nav = [
 
 interface SidebarProps { onClose?: () => void; mobile?: boolean }
 
+type IndustryMode = null | 'increase' | 'decrease'
+
 export function Sidebar({ onClose, mobile }: SidebarProps) {
   const pathname = usePathname()
   const { data: session } = useSession()
   const [isAdmin, setIsAdmin] = useState(false)
+
+  // Recession Round state
   const [recessionLoading, setRecessionLoading] = useState(false)
   const [recessionMsg, setRecessionMsg] = useState('')
   const [confirmOpen, setConfirmOpen] = useState(false)
+
+  // Stock Up state
   const [stockUpLoading, setStockUpLoading] = useState(false)
   const [stockUpMsg, setStockUpMsg] = useState('')
   const [stockUpConfirmOpen, setStockUpConfirmOpen] = useState(false)
+
+  // Industry market state
+  const [industryMode, setIndustryMode] = useState<IndustryMode>(null)
+  const [selectedSectors, setSelectedSectors] = useState<Set<string>>(new Set())
+  const [industryPercent, setIndustryPercent] = useState('10')
+  const [industryLoading, setIndustryLoading] = useState(false)
+  const [industryMsg, setIndustryMsg] = useState('')
 
   useEffect(() => {
     setIsAdmin(isAdminEmail(session?.user?.email))
@@ -69,6 +90,46 @@ export function Sidebar({ onClose, mobile }: SidebarProps) {
     } finally {
       setStockUpLoading(false)
       setTimeout(() => setStockUpMsg(''), 6000)
+    }
+  }
+
+  const toggleSector = (s: string) =>
+    setSelectedSectors((prev) => {
+      const next = new Set(prev)
+      next.has(s) ? next.delete(s) : next.add(s)
+      return next
+    })
+
+  const triggerIndustry = async () => {
+    if (!industryMode || selectedSectors.size === 0) return
+    const pct = parseFloat(industryPercent)
+    if (!Number.isFinite(pct) || pct <= 0 || pct > 100) {
+      setIndustryMsg('❌ Enter a valid percent (1–100)')
+      setTimeout(() => setIndustryMsg(''), 4000)
+      return
+    }
+    setIndustryLoading(true)
+    setIndustryMsg('')
+    try {
+      const res = await fetch('/api/admin/industry-market', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sectors: Array.from(selectedSectors), percent: pct, direction: industryMode }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setIndustryMsg(`✅ ${data.message}`)
+        setIndustryMode(null)
+        setSelectedSectors(new Set())
+        setIndustryPercent('10')
+      } else {
+        setIndustryMsg(`❌ ${data.error}`)
+      }
+    } catch {
+      setIndustryMsg('❌ Request failed')
+    } finally {
+      setIndustryLoading(false)
+      setTimeout(() => setIndustryMsg(''), 7000)
     }
   }
 
@@ -126,7 +187,7 @@ export function Sidebar({ onClose, mobile }: SidebarProps) {
           )
         })}
 
-        {/* Admin: Recession Round button */}
+        {/* ─── Admin Controls ─────────────────────────────────────────── */}
         {isAdmin && (
           <div className="pt-3 mt-3 border-t border-border/40">
             <div className="px-3 mb-2 flex items-center gap-1.5">
@@ -134,6 +195,7 @@ export function Sidebar({ onClose, mobile }: SidebarProps) {
               <span className="text-[10px] font-semibold text-orange-400 uppercase tracking-wider">Admin Controls</span>
             </div>
 
+            {/* Recession Round */}
             {!confirmOpen ? (
               <button
                 onClick={() => setConfirmOpen(true)}
@@ -146,30 +208,17 @@ export function Sidebar({ onClose, mobile }: SidebarProps) {
             ) : (
               <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-3 space-y-2">
                 <p className="text-xs text-orange-200 leading-snug">
-                  ⚠️ Drop <strong>all stocks by 10%</strong> immediately for all users?
+                  ⚠️ Drop <strong>all stocks by 10%</strong> immediately?
                 </p>
                 <div className="flex gap-2">
-                  <button
-                    onClick={triggerRecession}
-                    className="flex-1 py-1.5 text-xs font-bold bg-orange-600 hover:bg-orange-500 text-white rounded-lg transition-colors"
-                  >
-                    Yes, trigger!
-                  </button>
-                  <button
-                    onClick={() => setConfirmOpen(false)}
-                    className="flex-1 py-1.5 text-xs font-medium bg-background-tertiary hover:bg-background-hover text-text-secondary rounded-lg transition-colors"
-                  >
-                    Cancel
-                  </button>
+                  <button onClick={triggerRecession} className="flex-1 py-1.5 text-xs font-bold bg-orange-600 hover:bg-orange-500 text-white rounded-lg transition-colors">Yes, trigger!</button>
+                  <button onClick={() => setConfirmOpen(false)} className="flex-1 py-1.5 text-xs font-medium bg-background-tertiary hover:bg-background-hover text-text-secondary rounded-lg transition-colors">Cancel</button>
                 </div>
               </div>
             )}
+            {recessionMsg && <p className="mt-2 px-3 text-[11px] text-orange-200 leading-snug">{recessionMsg}</p>}
 
-            {recessionMsg && (
-              <p className="mt-2 px-3 text-[11px] text-orange-200 leading-snug">{recessionMsg}</p>
-            )}
-
-            {/* Admin navigation links */}
+            {/* Admin nav links */}
             <div className="mt-2 space-y-1">
               {[
                 { href: '/admin/monitoring', icon: Eye, label: 'Stock Monitoring' },
@@ -196,7 +245,7 @@ export function Sidebar({ onClose, mobile }: SidebarProps) {
               })}
             </div>
 
-            {/* Stock Up button (green) — raises all stocks 5% */}
+            {/* Stock Up */}
             <div className="mt-1">
               {!stockUpConfirmOpen ? (
                 <button
@@ -210,29 +259,134 @@ export function Sidebar({ onClose, mobile }: SidebarProps) {
               ) : (
                 <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 space-y-2">
                   <p className="text-xs text-emerald-200 leading-snug">
-                    🚀 Raise <strong>all stocks by 5%</strong> immediately for all users?
+                    🚀 Raise <strong>all stocks by 5%</strong> immediately?
                   </p>
                   <div className="flex gap-2">
-                    <button
-                      onClick={triggerStockUp}
-                      className="flex-1 py-1.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors"
-                    >
-                      Yes, boost!
-                    </button>
-                    <button
-                      onClick={() => setStockUpConfirmOpen(false)}
-                      className="flex-1 py-1.5 text-xs font-medium bg-background-tertiary hover:bg-background-hover text-text-secondary rounded-lg transition-colors"
-                    >
-                      Cancel
-                    </button>
+                    <button onClick={triggerStockUp} className="flex-1 py-1.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors">Yes, boost!</button>
+                    <button onClick={() => setStockUpConfirmOpen(false)} className="flex-1 py-1.5 text-xs font-medium bg-background-tertiary hover:bg-background-hover text-text-secondary rounded-lg transition-colors">Cancel</button>
                   </div>
                 </div>
               )}
-
-              {stockUpMsg && (
-                <p className="mt-2 px-3 text-[11px] text-emerald-200 leading-snug">{stockUpMsg}</p>
-              )}
+              {stockUpMsg && <p className="mt-2 px-3 text-[11px] text-emerald-200 leading-snug">{stockUpMsg}</p>}
             </div>
+
+            {/* ── Industry-specific controls ─────────────────────────── */}
+            <div className="mt-2 space-y-1">
+              {/* Increase Industry button */}
+              <button
+                onClick={() => setIndustryMode(industryMode === 'increase' ? null : 'increase')}
+                className={cn(
+                  'flex items-center justify-between gap-2 w-full px-3 py-2.5 rounded-xl text-sm font-medium border transition-all',
+                  industryMode === 'increase'
+                    ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-200'
+                    : 'text-emerald-300/90 border-emerald-500/20 hover:text-white hover:bg-emerald-600/80 hover:border-emerald-500/50'
+                )}
+              >
+                <span className="flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 shrink-0" />
+                  Increase Industry
+                </span>
+                <ChevronDown className={cn('w-3.5 h-3.5 transition-transform', industryMode === 'increase' && 'rotate-180')} />
+              </button>
+
+              {/* Decrease Industry button */}
+              <button
+                onClick={() => setIndustryMode(industryMode === 'decrease' ? null : 'decrease')}
+                className={cn(
+                  'flex items-center justify-between gap-2 w-full px-3 py-2.5 rounded-xl text-sm font-medium border transition-all',
+                  industryMode === 'decrease'
+                    ? 'bg-orange-500/15 border-orange-500/40 text-orange-200'
+                    : 'text-orange-300/90 border-orange-500/20 hover:text-white hover:bg-orange-600/80 hover:border-orange-500/50'
+                )}
+              >
+                <span className="flex items-center gap-2">
+                  <TrendingDown className="w-4 h-4 shrink-0" />
+                  Decrease Industry
+                </span>
+                <ChevronDown className={cn('w-3.5 h-3.5 transition-transform', industryMode === 'decrease' && 'rotate-180')} />
+              </button>
+            </div>
+
+            {/* Industry panel */}
+            {industryMode && (
+              <div className={cn(
+                'mt-2 rounded-xl border p-3 space-y-3',
+                industryMode === 'increase'
+                  ? 'bg-emerald-500/8 border-emerald-500/30'
+                  : 'bg-orange-500/8 border-orange-500/30'
+              )}>
+                <p className={cn('text-xs font-medium leading-snug', industryMode === 'increase' ? 'text-emerald-200' : 'text-orange-200')}>
+                  {industryMode === 'increase' ? '📈' : '📉'} Select sectors to {industryMode}:
+                </p>
+
+                {/* Sector checkboxes */}
+                <div className="grid grid-cols-2 gap-1 max-h-40 overflow-y-auto">
+                  {SECTORS.map((s) => (
+                    <label key={s} className="flex items-center gap-1.5 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={selectedSectors.has(s)}
+                        onChange={() => toggleSector(s)}
+                        className="w-3 h-3 rounded accent-brand"
+                      />
+                      <span className="text-[10px] text-text-secondary group-hover:text-text-primary leading-tight">{s}</span>
+                    </label>
+                  ))}
+                </div>
+
+                {/* Select all / clear */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setSelectedSectors(new Set(SECTORS))}
+                    className="text-[10px] text-brand hover:underline"
+                  >All</button>
+                  <button
+                    onClick={() => setSelectedSectors(new Set())}
+                    className="text-[10px] text-text-muted hover:underline"
+                  >Clear</button>
+                  <span className="text-[10px] text-text-disabled ml-auto">{selectedSectors.size} selected</span>
+                </div>
+
+                {/* Percent input */}
+                <div className="flex items-center gap-2">
+                  <label className="text-[10px] text-text-muted whitespace-nowrap">Change %</label>
+                  <input
+                    type="number"
+                    min={1} max={100} step={1}
+                    value={industryPercent}
+                    onChange={(e) => setIndustryPercent(e.target.value)}
+                    className="w-full px-2 py-1 bg-background-tertiary border border-border rounded-lg text-xs text-text-primary focus:outline-none focus:border-brand/60"
+                    placeholder="10"
+                  />
+                </div>
+
+                {/* Action buttons */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={triggerIndustry}
+                    disabled={industryLoading || selectedSectors.size === 0}
+                    className={cn(
+                      'flex-1 py-1.5 text-xs font-bold text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed',
+                      industryMode === 'increase' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-orange-600 hover:bg-orange-500'
+                    )}
+                  >
+                    {industryLoading ? 'Applying…' : `Apply ${industryMode === 'increase' ? '+' : '-'}${industryPercent}%`}
+                  </button>
+                  <button
+                    onClick={() => { setIndustryMode(null); setSelectedSectors(new Set()) }}
+                    className="flex-1 py-1.5 text-xs font-medium bg-background-tertiary hover:bg-background-hover text-text-secondary rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {industryMsg && (
+              <p className={cn('mt-2 px-3 text-[11px] leading-snug', industryMsg.startsWith('✅') ? 'text-emerald-200' : 'text-orange-200')}>
+                {industryMsg}
+              </p>
+            )}
           </div>
         )}
       </nav>

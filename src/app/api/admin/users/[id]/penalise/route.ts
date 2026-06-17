@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getAdminSession, writeAdminLog, isAdminEmail } from '@/lib/admin'
+import { notifyUser } from '@/lib/notify'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -48,6 +49,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       targetName: target.name,
       targetEmail: target.email,
       details: `Penalised ₹${amount.toLocaleString('en-IN')} — ${reason}`,
+    })
+
+    notifyUser(target.id, {
+      title: '⚠️ Account Penalty Applied',
+      message: `₹${amount.toLocaleString('en-IN')} has been deducted from your account. Reason: ${reason}`,
+      type: 'ADMIN',
     })
 
     return NextResponse.json({

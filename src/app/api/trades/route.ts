@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { accountBlockMessage } from '@/lib/admin'
+import { notifyUser } from '@/lib/notify'
 import { z } from 'zod'
 
 const tradeSchema = z.object({
@@ -102,6 +103,13 @@ export async function POST(req: NextRequest) {
         return trade
       })
 
+      // Fire-and-forget trade notification
+      notifyUser(user.id, {
+        title: `✅ Buy Order Executed`,
+        message: `Bought ${quantity} share${quantity > 1 ? 's' : ''} of ${stock.symbol} at ₹${livePrice.toFixed(2)} (Total: ₹${total.toFixed(2)})`,
+        type: 'TRADE',
+      })
+
       return NextResponse.json({
         trade: result,
         message: `Bought ${quantity} shares of ${stock.symbol}`,
@@ -153,6 +161,13 @@ export async function POST(req: NextRequest) {
         })
 
         return trade
+      })
+
+      const pnlSign = realizedPnl >= 0 ? '+' : ''
+      notifyUser(user.id, {
+        title: `✅ Sell Order Executed`,
+        message: `Sold ${quantity} share${quantity > 1 ? 's' : ''} of ${stock.symbol} at ₹${livePrice.toFixed(2)}. Realized P&L: ${pnlSign}₹${Math.abs(realizedPnl).toFixed(2)}`,
+        type: 'TRADE',
       })
 
       return NextResponse.json({

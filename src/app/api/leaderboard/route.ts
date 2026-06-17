@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { livePrice } from '@/lib/price-simulator'
 
 const INITIAL_CAPITAL = 1000000
 
@@ -13,8 +14,6 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const type = searchParams.get('type') || 'individual' // individual | team
     const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100)
-
-    const priceCache = (global as any).priceCache as Map<string, any> | undefined
 
     if (type === 'team') {
       const teams = await prisma.team.findMany({
@@ -34,8 +33,8 @@ export async function GET(req: NextRequest) {
           for (const member of team.members) {
             let memberValue = member.cashBalance
             for (const h of member.holdings) {
-              const livePrice = priceCache?.get(h.stock.symbol)?.price ?? h.stock.currentPrice
-              memberValue += livePrice * h.quantity
+              const price = livePrice(h.stock.symbol, h.stock.currentPrice)
+              memberValue += price * h.quantity
             }
             totalValue += memberValue
           }
@@ -72,8 +71,8 @@ export async function GET(req: NextRequest) {
     const mapped = users.map((user) => {
       let holdingsValue = 0
       for (const h of user.holdings) {
-        const livePrice = priceCache?.get(h.stock.symbol)?.price ?? h.stock.currentPrice
-        holdingsValue += livePrice * h.quantity
+        const price = livePrice(h.stock.symbol, h.stock.currentPrice)
+        holdingsValue += price * h.quantity
       }
       const totalValue = user.cashBalance + holdingsValue
       const pnl = totalValue - INITIAL_CAPITAL

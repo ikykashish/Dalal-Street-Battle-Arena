@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getAdminSession, writeAdminLog } from '@/lib/admin'
+import { notifyAllUsers } from '@/lib/notify'
 
 const RISE_PERCENT = 0.05 // 5% up (the inverse of Recession Round)
 
@@ -30,6 +31,12 @@ export async function POST(req: NextRequest) {
       action: 'STOCK_UP',
       adminEmail: session.user.email,
       details: `Raised all ${stocks.length} stocks by ${RISE_PERCENT * 100}%`,
+    })
+
+    notifyAllUsers({
+      title: '🚀 Market Surge!',
+      message: `All ${stocks.length} stocks have risen by 5%. Great time to review your portfolio!`,
+      type: 'MARKET',
     })
 
     return NextResponse.json({

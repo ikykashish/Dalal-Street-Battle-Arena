@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { getAdminSession, writeAdminLog, isAdminEmail } from '@/lib/admin'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { notifyAllUsers } from '@/lib/notify'
 
 const DROP_PERCENT = 0.10 // 10% drop
 
@@ -32,6 +33,12 @@ export async function POST(req: NextRequest) {
       action: 'RECESSION_TRIGGERED',
       adminEmail: session.user.email,
       details: `Dropped all ${stocks.length} stocks by ${DROP_PERCENT * 100}%`,
+    })
+
+    notifyAllUsers({
+      title: '📉 Recession Round Triggered',
+      message: `All ${stocks.length} stocks have dropped by 10%. Review your portfolio and adjust positions.`,
+      type: 'MARKET',
     })
 
     return NextResponse.json({
