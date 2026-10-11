@@ -2,20 +2,21 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getAdminSession } from '@/lib/admin'
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const session = await getAdminSession()
   if (!session) return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
 
   try {
     const user = await prisma.user.findUnique({
-      where: { id: params.id },
+      where: { id: id },
       select: { id: true, name: true, email: true, status: true, cashBalance: true },
     })
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
     // Oldest-first to reconstruct running average cost basis
     const tradesAsc = await prisma.trade.findMany({
-      where: { userId: params.id },
+      where: { userId: id },
       orderBy: { createdAt: 'asc' },
       select: {
         id: true,
@@ -63,7 +64,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     withPnl.reverse()
 
     const penalties = await prisma.penalty.findMany({
-      where: { userId: params.id },
+      where: { userId: id },
       orderBy: { createdAt: 'desc' },
       select: { id: true, amount: true, reason: true, adminEmail: true, createdAt: true },
     })

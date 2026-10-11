@@ -83,7 +83,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <p className="text-xs text-text-disabled">
               Made by{' '}
               <span className="font-semibold bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent">
-                Pavith Grover
+                Finance Club
               </span>
             </p>
           </footer>

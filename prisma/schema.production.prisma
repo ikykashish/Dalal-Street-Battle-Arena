@@ -15,7 +15,7 @@ model User {
   cashBalance  Float    @default(1000000)
   status       String   @default("ACTIVE") // ACTIVE | SUSPENDED | BANNED
   createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  updatedAt    DateTime @default(now()) @updatedAt
 
   team          Team?           @relation(fields: [teamId], references: [id])
   teamId        String?
@@ -78,7 +78,7 @@ model Team {
   description String?
   creatorId   String
   createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  updatedAt   DateTime @default(now()) @updatedAt
   members     User[]
 }
 
@@ -99,7 +99,7 @@ model Stock {
   change        Float    @default(0)
   changePercent Float    @default(0)
   createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  updatedAt     DateTime @default(now()) @updatedAt
 
   holdings   Holding[]
   trades     Trade[]
@@ -114,7 +114,7 @@ model Holding {
   quantity  Int
   avgPrice  Float
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @default(now()) @updatedAt
 
   user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId  String

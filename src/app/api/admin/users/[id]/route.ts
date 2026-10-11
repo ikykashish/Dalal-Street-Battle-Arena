@@ -3,13 +3,14 @@ import { prisma } from '@/lib/db'
 import { getAdminSession, writeAdminLog, isAdminEmail } from '@/lib/admin'
 
 /** Permanently delete a user and all associated data (holdings, trades, watchlist, penalties). */
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const session = await getAdminSession()
   if (!session) return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
 
   try {
     const target = await prisma.user.findUnique({
-      where: { id: params.id },
+      where: { id: id },
       select: { id: true, name: true, email: true },
     })
     if (!target) return NextResponse.json({ error: 'User not found' }, { status: 404 })

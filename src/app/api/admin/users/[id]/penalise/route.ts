@@ -9,7 +9,8 @@ const schema = z.object({
   reason: z.string().min(3).max(200),
 })
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const session = await getAdminSession()
   if (!session) return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
 
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const { amount, reason } = schema.parse(await req.json())
 
     const target = await prisma.user.findUnique({
-      where: { id: params.id },
+      where: { id: id },
       select: { id: true, name: true, email: true, cashBalance: true },
     })
     if (!target) return NextResponse.json({ error: 'User not found' }, { status: 404 })

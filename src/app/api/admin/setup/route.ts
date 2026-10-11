@@ -14,11 +14,15 @@ import { ADMIN_EMAILS, isAdminEmail } from '@/lib/admin-emails'
  * Guard with the SEED_SECRET (same as /api/seed). Rotate SEED_SECRET in your
  * Netlify env to lock this down further.
  */
-const SETUP_SECRET = process.env.SEED_SECRET || 'dalal-seed-2024'
+const SETUP_SECRET = process.env.SEED_SECRET
 
 export async function POST(req: NextRequest) {
   try {
     const { secret, email, password } = await req.json()
+
+    if (!SETUP_SECRET) {
+      return NextResponse.json({ error: 'Admin setup is not configured' }, { status: 503 })
+    }
 
     if (secret !== SETUP_SECRET) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

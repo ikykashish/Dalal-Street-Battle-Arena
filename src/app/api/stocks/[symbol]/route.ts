@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 
-export async function GET(req: NextRequest, { params }: { params: { symbol: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ symbol: string }> }) {
+  const { symbol: routeSymbol } = await params
   try {
-    const symbol = params.symbol.toUpperCase()
+    const symbol = routeSymbol.toUpperCase()
 
     const stock = await prisma.stock.findUnique({
       where: { symbol },

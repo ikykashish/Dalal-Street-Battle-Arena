@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { STOCKS_DATA } from '@/lib/stocks-data'
 
-const SEED_SECRET = process.env.SEED_SECRET || 'dalal-seed-2024'
+const SEED_SECRET = process.env.SEED_SECRET
 
 /**
  * Seeds / re-syncs stocks via UPSERT (keyed on symbol) — FK-safe (never deletes).
@@ -19,6 +19,10 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}))
     const { secret, start = 0, count } = body as { secret?: string; start?: number; count?: number }
+
+    if (!SEED_SECRET) {
+      return NextResponse.json({ error: 'Seed endpoint is not configured' }, { status: 503 })
+    }
 
     if (secret !== SEED_SECRET) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

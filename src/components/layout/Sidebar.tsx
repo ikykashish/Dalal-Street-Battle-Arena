@@ -397,7 +397,7 @@ export function Sidebar({ onClose, mobile }: SidebarProps) {
           <p className="text-[10px] text-text-disabled text-center">
             Made by{' '}
             <span className="font-semibold bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent">
-              Pavith Grover
+              Finance Club
             </span>
           </p>
         </div>
