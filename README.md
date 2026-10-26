@@ -1,4 +1,4 @@
-# Dalal Street Battle Arena 🚀
+# Trading Floor Battle Arena 🚀
 
 A production-ready virtual stock market trading competition platform built with Next.js, TypeScript, PostgreSQL, and Socket.IO.
 

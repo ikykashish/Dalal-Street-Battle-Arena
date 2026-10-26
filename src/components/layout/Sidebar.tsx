@@ -146,7 +146,7 @@ export function Sidebar({ onClose, mobile }: SidebarProps) {
             <TrendingUp className="w-5 h-5 text-white" />
           </div>
           <div>
-            <div className="text-sm font-bold text-text-primary leading-tight">Dalal Street</div>
+            <div className="text-sm font-bold text-text-primary leading-tight">Trading Floor</div>
             <div className="text-xs font-semibold bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent leading-tight">
               Battle Arena
             </div>

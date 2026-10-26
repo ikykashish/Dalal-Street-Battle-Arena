@@ -22,7 +22,7 @@ export default function LandingPage() {
                 <TrendingUp className="w-5 h-5 text-white" />
               </div>
               <span className="text-base font-bold text-text-primary">
-                Dalal Street{' '}
+                Trading Floor{' '}
                 <span className="bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent">
                   Battle Arena
                 </span>
@@ -145,7 +145,7 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="border-t border-border/50 py-8">
         <div className="max-w-7xl mx-auto px-4 text-center text-text-muted text-sm space-y-1">
-          <p>Dalal Street Battle Arena · Virtual trading platform for educational purposes only.</p>
+          <p>Trading Floor Battle Arena · Virtual trading platform for educational purposes only.</p>
           <p className="text-xs text-text-disabled">Not SEBI registered · No real money involved</p>
           <p className="text-xs pt-1">
             Made by{' '}

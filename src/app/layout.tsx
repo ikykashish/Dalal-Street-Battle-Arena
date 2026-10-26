@@ -3,7 +3,7 @@ import './globals.css'
 import { Providers } from './providers'
 
 export const metadata: Metadata = {
-  title: 'Dalal Street Battle Arena',
+  title: 'Trading Floor Battle Arena',
   description: 'Virtual stock market trading competition. Build your portfolio, beat the market, dominate the leaderboard.',
   keywords: ['stock market', 'trading', 'NSE', 'virtual trading', 'portfolio', 'India'],
   themeColor: '#0d0d0d',

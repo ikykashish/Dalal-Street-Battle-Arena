@@ -25,7 +25,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             <TrendingUp className="w-4 h-4 text-white" />
           </div>
           <span className="text-sm font-bold text-text-primary">
-            Dalal Street{' '}
+            Trading Floor{' '}
             <span className="bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent">
               Battle Arena
             </span>

@@ -201,7 +201,7 @@ app.prepare().then(async () => {
 
   httpServer.listen(port, () => {
     console.log(`
-🚀 Dalal Street Battle Arena
+🚀 Trading Floor Battle Arena
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🌐 URL:     http://${hostname}:${port}
 📊 Mode:    ${dev ? 'Development' : 'Production'}
