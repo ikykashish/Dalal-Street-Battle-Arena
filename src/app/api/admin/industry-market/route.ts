@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSession, writeAdminLog } from '@/lib/admin'
 import { prisma } from '@/lib/db'
 import { notifyAllUsers } from '@/lib/notify'
+import { applyAdminPriceUpdates } from '@/lib/market-control'
 
 const VALID_SECTORS = [
   'Finance', 'Technology', 'Healthcare', 'Energy', 'Manufacturing',
@@ -39,17 +40,28 @@ export async function POST(req: NextRequest) {
   if (stocks.length === 0)
     return NextResponse.json({ error: 'No stocks found for selected sectors' }, { status: 404 })
 
-  await prisma.$transaction(
-    stocks.map((s) => {
-      const newPrice = Math.max(Math.round(s.currentPrice * multiplier * 100) / 100, 0.01)
-      const change = newPrice - s.previousClose
-      const changePercent = (change / s.previousClose) * 100
-      return prisma.stock.update({
-        where: { id: s.id },
-        data: { currentPrice: newPrice, change, changePercent },
-      })
-    })
-  )
+  const updates = stocks.map((s) => {
+    const price = Math.max(Math.round(s.currentPrice * multiplier * 100) / 100, 0.01)
+    const change = price - s.previousClose
+    return {
+      id: s.id,
+      symbol: s.symbol,
+      price,
+      change,
+      changePercent: (change / s.previousClose) * 100,
+      previousClose: s.previousClose,
+    }
+  })
+
+  await prisma.$transaction(updates.map((update) => prisma.stock.update({
+    where: { id: update.id },
+    data: {
+      currentPrice: update.price,
+      change: update.change,
+      changePercent: update.changePercent,
+    },
+  })))
+  applyAdminPriceUpdates(updates)
 
   const sign = direction === 'increase' ? '+' : '-'
   const sectorList = sectors.join(', ')

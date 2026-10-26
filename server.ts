@@ -20,6 +20,7 @@ const priceCache: Map<string, {
   changePercent: number
   volume: number
   previousClose: number
+  holdUntil?: number
 }> = new Map()
 
 async function loadInitialPrices() {
@@ -77,8 +78,15 @@ function startPriceSimulator(io: SocketIOServer) {
     const updates: { symbol: string; price: number; change: number; changePercent: number; volume: number }[] = []
     const dbUpdates: { symbol: string; price: number; change: number; changePercent: number }[] = []
 
-    // Update a random subset of stocks each tick (40-60% of stocks)
-    const symbols = Array.from(priceCache.keys())
+    // Leave admin-adjusted prices untouched for five minutes so the market
+    // control remains visible before the normal simulation resumes.
+    const now = Date.now()
+    const symbols = Array.from(priceCache.values())
+      .filter((stock) => !stock.holdUntil || stock.holdUntil <= now)
+      .map((stock) => stock.symbol)
+    if (symbols.length === 0) return
+
+    // Update a random subset of eligible stocks each tick (40-60% of stocks)
     const updateCount = Math.floor(symbols.length * (0.4 + Math.random() * 0.2))
     const shuffled = symbols.sort(() => Math.random() - 0.5).slice(0, updateCount)
 

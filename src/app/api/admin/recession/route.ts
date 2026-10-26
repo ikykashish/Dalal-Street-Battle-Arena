@@ -4,6 +4,7 @@ import { getAdminSession, writeAdminLog, isAdminEmail } from '@/lib/admin'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { notifyAllUsers } from '@/lib/notify'
+import { applyAdminPriceUpdates } from '@/lib/market-control'
 
 const DROP_PERCENT = 0.10 // 10% drop
 
@@ -13,21 +14,31 @@ export async function POST(req: NextRequest) {
 
   try {
     const stocks = await prisma.stock.findMany({
-      select: { id: true, currentPrice: true, previousClose: true },
+      select: { id: true, symbol: true, currentPrice: true, previousClose: true },
     })
 
     // Drop every stock by 10% in a single transaction
-    await prisma.$transaction(
-      stocks.map((s) => {
-        const newPrice = Math.round(s.currentPrice * (1 - DROP_PERCENT) * 100) / 100
-        const change = newPrice - s.previousClose
-        const changePercent = (change / s.previousClose) * 100
-        return prisma.stock.update({
-          where: { id: s.id },
-          data: { currentPrice: newPrice, change, changePercent },
-        })
-      })
-    )
+    const updates = stocks.map((s) => {
+      const price = Math.round(s.currentPrice * (1 - DROP_PERCENT) * 100) / 100
+      const change = price - s.previousClose
+      return {
+        id: s.id,
+        symbol: s.symbol,
+        price,
+        change,
+        changePercent: (change / s.previousClose) * 100,
+        previousClose: s.previousClose,
+      }
+    })
+    await prisma.$transaction(updates.map((update) => prisma.stock.update({
+      where: { id: update.id },
+      data: {
+        currentPrice: update.price,
+        change: update.change,
+        changePercent: update.changePercent,
+      },
+    })))
+    applyAdminPriceUpdates(updates)
 
     await writeAdminLog({
       action: 'RECESSION_TRIGGERED',
