@@ -395,9 +395,15 @@ export function Sidebar({ onClose, mobile }: SidebarProps) {
       <div className="p-3 border-t border-border/60 shrink-0 space-y-1">
         <div className="px-3 py-2">
           <p className="text-[10px] text-text-disabled text-center">
-            Made by{' '}
+            Lead developer:{' '}
             <span className="font-semibold bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent">
-              Finance Club
+              Ashish Rajak
+            </span>
+          </p>
+          <p className="text-[10px] text-text-disabled text-center">
+            Project team:{' '}
+            <span className="font-semibold bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent">
+              Avnish Mishra · Pavith Grover
             </span>
           </p>
         </div>

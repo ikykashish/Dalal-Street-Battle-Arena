@@ -148,9 +148,13 @@ export default function LandingPage() {
           <p>Trading Floor Battle Arena · Virtual trading platform for educational purposes only.</p>
           <p className="text-xs text-text-disabled">Not SEBI registered · No real money involved</p>
           <p className="text-xs pt-1">
-            Made by{' '}
+            Lead developer:{' '}
             <span className="font-semibold bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent">
-              Pavith Grover
+              Ashish Rajak
+            </span>
+            {' '}· Project team:{' '}
+            <span className="font-semibold bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent">
+              Avnish Mishra · Pavith Grover
             </span>
           </p>
         </div>

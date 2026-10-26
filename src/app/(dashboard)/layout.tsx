@@ -81,9 +81,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
           <footer className="border-t border-border/50 py-3 px-6 text-center mt-4">
             <p className="text-xs text-text-disabled">
-              Made by{' '}
+              Lead developer:{' '}
               <span className="font-semibold bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent">
-                Finance Club
+                Ashish Rajak
+              </span>
+              {' '}· Project team:{' '}
+              <span className="font-semibold bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent">
+                Avnish Mishra · Pavith Grover
               </span>
             </p>
           </footer>

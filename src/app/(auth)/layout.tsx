@@ -44,12 +44,17 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       {/* Footer */}
       <div className="relative z-10 py-3 text-center border-t border-border/30">
         <p className="text-xs text-text-disabled">
-          Made by{' '}
+          Lead developer:{' '}
           <span className="font-semibold bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent">
-            Pavith Grover
+            Ashish Rajak
           </span>
-          {' '}·{' '}
-          <span className="text-text-disabled">Bharati Vidyapeeth DMS, Pune</span>
+          {' '}· Project team:{' '}
+          <span className="font-semibold bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent">
+            Avnish Mishra · Pavith Grover
+          </span>
+        </p>
+        <p className="text-[10px] text-text-disabled">
+          Bharati Vidyapeeth DMS, Pune
         </p>
       </div>
     </div>
